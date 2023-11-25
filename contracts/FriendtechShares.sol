@@ -24,6 +24,13 @@ contract FriendtechSharesV2 is Ownable {
     // SharesSubject => Supply
     mapping(address => uint256) public sharesSupply;
 
+    // Total supply of shares
+    uint256 public totalSupplyShares;
+
+    // Total supply share of user
+    mapping(address => address[]) totalSupplySharesOfUser;
+    mapping(address => bool) isTotalSupply;
+
     function setFeeDestination(address _feeDestination) public onlyOwner {
         protocolFeeDestination = _feeDestination;
     }
@@ -103,6 +110,29 @@ contract FriendtechSharesV2 is Ownable {
             sharesBalance[sharesSubject][msg.sender] +
             amount;
         sharesSupply[sharesSubject] = supply + amount;
+
+        if (!isTotalSupply[sharesSubject]) {
+            isTotalSupply[sharesSubject] = true;
+            totalSupplyShares = totalSupplyShares + 1;
+        }
+
+        // check if user not already has shares => add to totalSupplySharesOfUser
+        bool hasShares = false;
+        for (
+            uint256 i = 0;
+            i < totalSupplySharesOfUser[msg.sender].length;
+            i++
+        ) {
+            if (totalSupplySharesOfUser[msg.sender][i] == sharesSubject) {
+                hasShares = true;
+                break;
+            }
+        }
+
+        if (!hasShares) {
+            totalSupplySharesOfUser[msg.sender].push(sharesSubject);
+        }
+
         emit Trade(
             msg.sender,
             sharesSubject,
@@ -148,5 +178,29 @@ contract FriendtechSharesV2 is Ownable {
         (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
         (bool success3, ) = sharesSubject.call{value: subjectFee}("");
         require(success1 && success2 && success3, "Unable to send funds");
+    }
+
+    function getTotalSupplyShares() public view returns (uint256) {
+        return totalSupplyShares;
+    }
+
+    function getKeysOfUser(
+        address user
+    ) public view returns (address[] memory) {
+        return totalSupplySharesOfUser[user];
+    }
+
+    function getTotalKeysOfUser(address user) public view returns (uint256) {
+        return totalSupplySharesOfUser[user].length;
+    }
+
+    function getTotalBalanceOfUser(address user) public view returns (uint256) {
+        uint256 totalBalance = 0;
+        for (uint256 i = 0; i < totalSupplySharesOfUser[user].length; i++) {
+            totalBalance =
+                totalBalance +
+                sharesBalance[totalSupplySharesOfUser[user][i]][user];
+        }
+        return totalBalance;
     }
 }
