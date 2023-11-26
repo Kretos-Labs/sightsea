@@ -2,10 +2,12 @@
 pragma solidity >=0.8.2 <0.9.0;
 import "./Ownable.sol";
 
-contract FriendtechSharesV2 is Ownable {
+contract FriendTechSharesV2 is Ownable {
     address public protocolFeeDestination;
     uint256 public protocolFeePercent;
     uint256 public subjectFeePercent;
+
+    constructor() payable {}
 
     event Trade(
         address trader,
@@ -24,12 +26,8 @@ contract FriendtechSharesV2 is Ownable {
     // SharesSubject => Supply
     mapping(address => uint256) public sharesSupply;
 
-    // Total supply of shares
-    uint256 public totalSupplyShares;
-
-    // Total supply share of user
-    mapping(address => address[]) totalSupplySharesOfUser;
-    mapping(address => bool) isTotalSupply;
+    // Address => Reputation
+    mapping(address => uint256) public reputation;
 
     function setFeeDestination(address _feeDestination) public onlyOwner {
         protocolFeeDestination = _feeDestination;
@@ -110,29 +108,6 @@ contract FriendtechSharesV2 is Ownable {
             sharesBalance[sharesSubject][msg.sender] +
             amount;
         sharesSupply[sharesSubject] = supply + amount;
-
-        if (!isTotalSupply[sharesSubject]) {
-            isTotalSupply[sharesSubject] = true;
-            totalSupplyShares = totalSupplyShares + 1;
-        }
-
-        // check if user not already has shares => add to totalSupplySharesOfUser
-        bool hasShares = false;
-        for (
-            uint256 i = 0;
-            i < totalSupplySharesOfUser[msg.sender].length;
-            i++
-        ) {
-            if (totalSupplySharesOfUser[msg.sender][i] == sharesSubject) {
-                hasShares = true;
-                break;
-            }
-        }
-
-        if (!hasShares) {
-            totalSupplySharesOfUser[msg.sender].push(sharesSubject);
-        }
-
         emit Trade(
             msg.sender,
             sharesSubject,
@@ -180,35 +155,24 @@ contract FriendtechSharesV2 is Ownable {
         require(success1 && success2 && success3, "Unable to send funds");
     }
 
-    function getTotalSupplyShares() public view returns (uint256) {
-        return totalSupplyShares;
+    function setReputation(address user, uint256 amount) public {
+        reputation[user] = amount;
     }
 
-    function getKeysOfUser(
-        address user
-    ) public view returns (address[] memory) {
-        return totalSupplySharesOfUser[user];
+    function getReputation(address user) public view returns (uint256) {
+        return reputation[user];
     }
 
-    function getTotalKeysOfUser(address user) public view returns (uint256) {
-        return totalSupplySharesOfUser[user].length;
-    }
-
-    function getTotalBalanceOfUser(address user) public view returns (uint256) {
-        uint256 totalBalance = 0;
-        for (uint256 i = 0; i < totalSupplySharesOfUser[user].length; i++) {
-            address sharesSubject = totalSupplySharesOfUser[user][i];
-            uint256 countKeys = sharesBalance[sharesSubject][user];
-
-            uint256 price = getPrice(sharesSupply[sharesSubject], countKeys);
-            totalBalance = totalBalance + price;
-        }
-        return totalBalance;
-    }
-
-    function getTotalBalanceInMarket() public view returns (uint256) {
-        uint256 totalBalance = 0;
-        for (uint256 i = 0; i < totalSupplyShares; i++) {}
-        return totalBalance;
+    function tranferReputation(
+        address from,
+        address to,
+        uint256 amount
+    ) public {
+        require(
+            reputation[from] >= amount,
+            "Insufficient reputation to transfer"
+        );
+        reputation[from] = reputation[from] - amount;
+        reputation[to] = reputation[to] + amount;
     }
 }

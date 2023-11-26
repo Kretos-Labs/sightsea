@@ -11,7 +11,7 @@ async function main() {
   const unlockTime = currentTimestampInSeconds + 60;
 
   const lockedAmount = hre.ethers.parseEther("0.001");
-  const friendTechAmount = hre.ethers.parseEther("0.001");
+  const friendTechAmount = hre.ethers.parseEther("0.05");
 
   const lock = await hre.ethers.deployContract("Lock", [unlockTime], {
     value: lockedAmount,
