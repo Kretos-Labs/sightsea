@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.8.2 <0.9.0;
 import "./Ownable.sol";
 
-contract FriendtechSharesV1 is Ownable {
+contract SightseeV1 is Ownable {
     address public protocolFeeDestination;
     uint256 public protocolFeePercent;
     uint256 public subjectFeePercent;
@@ -23,6 +23,18 @@ contract FriendtechSharesV1 is Ownable {
 
     // SharesSubject => Supply
     mapping(address => uint256) public sharesSupply;
+
+    // Address => Reputation
+    mapping(address => uint256) public reputation;
+
+    uint256 public totalSubjects;
+    address[] public allSubjects;
+
+    // Address => Is Subject
+    mapping(address => bool) public isSubject;
+
+    // Address => Keys of user
+    mapping(address => address[]) public keysOfUser;
 
     function setFeeDestination(address _feeDestination) public onlyOwner {
         protocolFeeDestination = _feeDestination;
@@ -103,6 +115,23 @@ contract FriendtechSharesV1 is Ownable {
             sharesBalance[sharesSubject][msg.sender] +
             amount;
         sharesSupply[sharesSubject] = supply + amount;
+
+        if (!isSubject[sharesSubject]) {
+            isSubject[sharesSubject] = true;
+            totalSubjects = totalSubjects + 1;
+            allSubjects.push(sharesSubject);
+        }
+
+        bool hasKey = false;
+        for (uint256 i = 0; i < keysOfUser[msg.sender].length; i++) {
+            if (keysOfUser[msg.sender][i] == sharesSubject) {
+                hasKey = true;
+                break;
+            }
+        }
+        if (!hasKey) {
+            keysOfUser[msg.sender].push(sharesSubject);
+        }
         emit Trade(
             msg.sender,
             sharesSubject,
@@ -132,6 +161,12 @@ contract FriendtechSharesV1 is Ownable {
             sharesBalance[sharesSubject][msg.sender] -
             amount;
         sharesSupply[sharesSubject] = supply - amount;
+
+        if (sharesSupply[sharesSubject] == 0) {
+            isSubject[sharesSubject] = false;
+            totalSubjects = totalSubjects - 1;
+        }
+
         emit Trade(
             msg.sender,
             sharesSubject,
@@ -148,5 +183,52 @@ contract FriendtechSharesV1 is Ownable {
         (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
         (bool success3, ) = sharesSubject.call{value: subjectFee}("");
         require(success1 && success2 && success3, "Unable to send funds");
+    }
+
+    function checkKeyIsSubject(address key) public view returns (bool) {
+        return isSubject[key];
+    }
+
+    function setReputation(address user, uint256 amount) public {
+        reputation[user] = amount;
+    }
+
+    function getReputation(address user) public view returns (uint256) {
+        return reputation[user];
+    }
+
+    function tranferReputation(
+        address from,
+        address to,
+        uint256 amount
+    ) public {
+        require(
+            reputation[from] >= amount,
+            "Insufficient reputation to transfer"
+        );
+        reputation[from] = reputation[from] - amount;
+        reputation[to] = reputation[to] + amount;
+    }
+
+    function getAllKeysOfUser(
+        address user
+    ) public view returns (address[] memory) {
+        return keysOfUser[user];
+    }
+
+    function getTotalSubjects() public view returns (uint256) {
+        return totalSubjects;
+    }
+
+    function getAllKeyInMarket() public view returns (address[] memory) {
+        address[] memory keys = new address[](totalSubjects);
+        uint256 index = 0;
+        for (uint256 i = 0; i < allSubjects.length; i++) {
+            if (isSubject[allSubjects[i]]) {
+                keys[index] = allSubjects[i];
+                index = index + 1;
+            }
+        }
+        return keys;
     }
 }
