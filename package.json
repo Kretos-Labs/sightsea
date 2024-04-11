@@ -15,6 +15,9 @@
     "typechain": "^8.3.0"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.0.0"
+    "@openzeppelin/contracts": "^5.0.0",
+    "@openzeppelin/truffle-upgrades": "^1.21.0",
+    "@truffle/hdwallet-provider": "^2.1.15",
+    "solhint": "^4.5.2"
   }
 }
