@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 interface IDelegatedProxy {
     function _getSharesSupply(address subject) external view returns(uint256);
     function _getSharesBalance(address from, address subject) external view returns(uint256);
-    function _transferToken(address to, uint256 amount) external returns(bool);
+    function transferToken(address to, uint256 amount) external returns(bool);
 }
 
 contract SightseaSharesV1 is Ownable {
@@ -205,7 +205,9 @@ contract SightseaSharesV1 is Ownable {
         uint256 sharesAmount = this.getSharesBalance(from, sharesSubject);
         // require((supply + 1) > amount, "Cannot sell the last share");
 
+
         uint256 price = getPrice(supply - amount, amount);
+
 
         require(
             sharesAmount >= amount,
@@ -217,13 +219,14 @@ contract SightseaSharesV1 is Ownable {
         bool success1 = true;
         uint256 sellFee = sellTransactionFee;
 
+
         if (price < sellFee) {
             //Send fee back to platform
             success1 = currencyToken.transferFrom(from, protocolFeeDestination, sellFee - price);
         } else if (price > sellFee) {
             //Send token to seller
             (bool proxySuccess, bytes memory data) = _targetContract.call(
-                abi.encodeWithSelector(IDelegatedProxy._transferToken.selector, from, price - sellFee)
+                abi.encodeWithSelector(IDelegatedProxy.transferToken.selector, from, price - sellFee)
             );
 
             success1 = proxySuccess;
