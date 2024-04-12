@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -29,6 +28,7 @@ contract SightseaSharesProxyV1 is Ownable {
 
     // SharesSubject => Supply
     mapping(address => uint256) public sharesSupply;
+    bool internal _migrate = false;
 
     uint256 internal _userBuyGasRefundAmount = 0;
 
@@ -37,6 +37,16 @@ contract SightseaSharesProxyV1 is Ownable {
     //*============ MODIFIERS ==========
     modifier onlyTargetContract() {
         require(msg.sender == _targetContract, "Only allowed contract can call this function");
+        _;
+    }
+
+    modifier onlyContractOrOwner() {
+        require(msg.sender == _targetContract || msg.sender == owner(), "Only allowed contract or owner can call this function");
+        _;
+    }
+
+    modifier onlyMigrate() {
+        require(_migrate, "Migrate mode disabled");
         _;
     }
 
@@ -53,6 +63,38 @@ contract SightseaSharesProxyV1 is Ownable {
 
     event GasRefund(address indexed user, uint256 amount);
 
+    //*============ CONFIGS ==========
+    function setMigrateMode(bool enable) public onlyOwner {
+        _migrate = enable;
+    }
+
+    //*============ MIGRATE ===========
+    function buySharesWithoutFee(
+        address sender,
+        address sharesSubject,
+        uint256 amount
+    ) public onlyMigrate {
+        uint256 supply = sharesSupply[sharesSubject];
+        uint256 price = getPrice(supply, amount);
+        uint256 fee = getBuyFee(price);
+
+        sharesBalance[sharesSubject][sender] =
+            sharesBalance[sharesSubject][sender] +
+            amount;
+        sharesSupply[sharesSubject] = supply + amount;
+
+        emit Trade(
+            sender,
+            sharesSubject,
+            true,
+            amount,
+            price,
+            fee,
+            supply + amount
+        );
+    }
+    
+
     //SETTERS & GETTERS
     function setTargetContract(address target) public onlyOwner {
         _targetContract = target;
@@ -66,12 +108,12 @@ contract SightseaSharesProxyV1 is Ownable {
     //*============ TOKEN ============
     function depositGas() public payable {}
 
-    function withdrawGas(uint256 amount) public onlyTargetContract onlyOwner {
+    function withdrawGas(uint256 amount) public onlyContractOrOwner {
         require(amount <= address(this).balance, "Insufficient balance");
         payable(msg.sender).transfer(amount);
     }
 
-    function transferToken(address to, uint256 amount) public onlyTargetContract onlyOwner returns (bool) {
+    function transferToken(address to, uint256 amount) public onlyContractOrOwner returns (bool) {
         currencyToken.transfer(to, amount);
 
         return true;
@@ -161,7 +203,7 @@ contract SightseaSharesProxyV1 is Ownable {
         address buyer, 
         address subject, 
         uint256 amount
-    ) public onlyOwner onlyTargetContract returns (bool) {
+    ) public onlyContractOrOwner returns (bool) {
         sharesBalance[subject][buyer] = amount;
 
         return true;
@@ -177,7 +219,7 @@ contract SightseaSharesProxyV1 is Ownable {
     function setSharesSupply(
         address subject, 
         uint256 amount
-    ) public onlyOwner onlyTargetContract returns (bool) {
+    ) public onlyContractOrOwner returns (bool) {
         sharesSupply[subject] = amount;
 
         return true;
@@ -230,9 +272,6 @@ contract SightseaSharesProxyV1 is Ownable {
     ) public view returns (uint256) {
         uint256 price = this.getBuyPrice(sharesSubject, amount);
         uint256 fee = this.getBuyFee(price);
-
-        console.log(fee);
-        console.log(price);
 
         return price + fee;
     }
@@ -313,8 +352,6 @@ contract SightseaSharesProxyV1 is Ownable {
         uint256 gasUsed = gasleft();
         uint256 gasRefundAmount = (_userBuyGasRefundAmount + gasUsed) * tx.gasprice;
         emit GasRefund(msg.sender, gasRefundAmount);
-
-        console.log(gasRefundAmount);
         
         payable(msg.sender).transfer(gasRefundAmount);
     }
@@ -353,8 +390,6 @@ contract SightseaSharesProxyV1 is Ownable {
         uint256 gasUsed = gasleft();
         uint256 gasRefundAmount = (_userBuyGasRefundAmount + gasUsed) * tx.gasprice;
         emit GasRefund(msg.sender, gasRefundAmount);
-
-        console.log(gasRefundAmount);
         
         payable(msg.sender).transfer(gasRefundAmount);
     }

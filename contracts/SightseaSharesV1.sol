@@ -3,7 +3,6 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "hardhat/console.sol";
 
 interface IDelegatedProxy {
     function _getSharesSupply(address subject) external view returns(uint256);
@@ -70,6 +69,13 @@ contract SightseaSharesV1 is Ownable {
         return IDelegatedProxy(address(this))._getSharesBalance(from, subject);
     }
 
+    function setDefaultConfig() public onlyOwner {
+        buyTransactionFee = 10000000000000000;
+        protocolFeePercent = 50000000000000000;
+        sellTransactionFee = 10000000000000000;
+        subjectFeePercent = 50000000000000000;
+    }
+
     //*============ TOKEN ============
     function setCurrencyToken(address tokenAddress) public onlyOwner {
         currencyToken = ERC20(tokenAddress);
@@ -88,7 +94,7 @@ contract SightseaSharesV1 is Ownable {
     }
 
     //*============ FEE MANAGEMENT ============
-    function setFeeDestination(address _feeDestination) public onlyOwner onlyTargetContract {
+    function setFeeDestination(address _feeDestination) public onlyOwner {
         protocolFeeDestination = _feeDestination;
     }
 
@@ -96,7 +102,7 @@ contract SightseaSharesV1 is Ownable {
         return protocolFeeDestination;
     }
 
-    function setProtocolFeePercent(uint256 _feePercent) public onlyOwner onlyTargetContract {
+    function setProtocolFeePercent(uint256 _feePercent) public onlyOwner {
         protocolFeePercent = _feePercent;
     }
 
@@ -104,7 +110,7 @@ contract SightseaSharesV1 is Ownable {
         return protocolFeePercent;
     }
 
-    function setSubjectFeePercent(uint256 _feePercent) public onlyOwner onlyTargetContract {
+    function setSubjectFeePercent(uint256 _feePercent) public onlyOwner {
         subjectFeePercent = _feePercent;
     }
 
@@ -112,11 +118,11 @@ contract SightseaSharesV1 is Ownable {
         return subjectFeePercent;
     }
 
-    function setUserBuyGasRefundAmount(uint256 amount) public onlyOwner onlyTargetContract {
+    function setUserBuyGasRefundAmount(uint256 amount) public onlyOwner {
         _userBuyGasRefundAmount = amount;
     }
 
-    function setSellTransactionFee(uint256 amount) public onlyOwner onlyTargetContract {
+    function setSellTransactionFee(uint256 amount) public onlyOwner {
         sellTransactionFee = amount;
     }
 
@@ -124,7 +130,7 @@ contract SightseaSharesV1 is Ownable {
         return sellTransactionFee;
     }
 
-    function setBuyTransactionFee(uint256 amount) public onlyOwner onlyTargetContract {
+    function setBuyTransactionFee(uint256 amount) public onlyOwner {
         buyTransactionFee = amount;
     }
 
@@ -162,7 +168,7 @@ contract SightseaSharesV1 is Ownable {
         address from,
         address sharesSubject,
         uint256 amount
-    ) public onlyTargetContract {
+    ) public {
         uint256 supply = this.getSharesSupply(sharesSubject);
         
         require(
@@ -194,7 +200,7 @@ contract SightseaSharesV1 is Ownable {
         address from,
         address sharesSubject,
         uint256 amount
-    ) public onlyTargetContract {
+    ) public {
         uint256 supply = this.getSharesSupply(sharesSubject);
         uint256 sharesAmount = this.getSharesBalance(from, sharesSubject);
         // require((supply + 1) > amount, "Cannot sell the last share");
@@ -206,7 +212,6 @@ contract SightseaSharesV1 is Ownable {
             "Insufficient shares"
         );
 
-        console.log("SEND TOKEN");
         //* SEND TOKEN
         //Kiểm tra điều kiện nếu sell là âm thì trả tiền ngược về cho platform
         bool success1 = true;
