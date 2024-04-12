@@ -200,7 +200,7 @@ contract SightseaSharesV1 is Ownable {
         address from,
         address sharesSubject,
         uint256 amount
-    ) public {
+    ) public onlyTargetContract {
         uint256 supply = this.getSharesSupply(sharesSubject);
         uint256 sharesAmount = this.getSharesBalance(from, sharesSubject);
         // require((supply + 1) > amount, "Cannot sell the last share");
