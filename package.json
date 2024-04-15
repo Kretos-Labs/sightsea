@@ -12,7 +12,11 @@
     "hardhat": "^2.19.1",
     "hardhat-gas-reporter": "^1.0.8",
     "solidity-coverage": "^0.8.0",
+    "truffle-plugin-verify": "^0.6.7",
     "typechain": "^8.3.0"
+  },
+  "scripts": {
+    "verify": "truffle run verify SightseaSharesProxyV1@0x1047123988257DC3bF4ca1ccC2a88d8ef81334b6 --network moonbeam"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.0",

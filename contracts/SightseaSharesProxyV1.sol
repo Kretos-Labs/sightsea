@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "./SafeMath.sol";
 
 interface IDelegatedProxy {
     function _getPrice(uint256 supply, uint256 amount) external view returns(uint256);
@@ -41,7 +41,9 @@ contract SightseaSharesProxyV1 is Ownable {
     }
 
     modifier onlyContractOrOwner() {
-        require(msg.sender == _targetContract || msg.sender == owner(), "Only allowed contract or owner can call this function");
+        require(
+          msg.sender == _targetContract || msg.sender == owner()
+          , "Only allowed contract or owner can call this function");
         _;
     }
 
